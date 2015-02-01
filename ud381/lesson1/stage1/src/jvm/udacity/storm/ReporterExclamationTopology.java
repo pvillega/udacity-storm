@@ -12,7 +12,8 @@ import backtype.storm.topology.base.BaseRichBolt;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
-import backtype.storm.utils.Utils;
+import com.lambdaworks.redis.RedisClient;
+import com.lambdaworks.redis.RedisConnection;
 
 import java.util.Map;
 
@@ -34,123 +35,119 @@ import java.util.Map;
 
 /**
  * This is a basic example of a storm topology.
- *
+ * <p/>
  * This topology demonstrates how to add three exclamation marks '!!!'
  * to each word emitted
- *
+ * <p/>
  * This is an example for Udacity Real Time Analytics Course - ud381
- *
  */
 public class ReporterExclamationTopology {
 
-  /**
-   * A bolt that adds the exclamation marks '!!!' to word
-   */
-  public static class ExclamationBolt extends BaseRichBolt
-  {
-    // To output tuples from this bolt to the next stage bolts, if any
-    OutputCollector _collector;
+    /**
+     * A bolt that adds the exclamation marks '!!!' to word
+     */
+    public static class ExclamationBolt extends BaseRichBolt {
+        // To output tuples from this bolt to the next stage bolts, if any
+        OutputCollector _collector;
 
-    //********* TO DO 2-of-4
-    // place holder to keep the connection to redis
+        //********* TO DO 2-of-4
+        // place holder to keep the connection to redis
+        RedisConnection<String, String> redis;
 
+        //********* END 2-of-4
 
-    //********* END 2-of-4
+        @Override
+        public void prepare(
+                Map map,
+                TopologyContext topologyContext,
+                OutputCollector collector) {
+            // save the output collector for emitting tuples
+            _collector = collector;
 
-    @Override
-    public void prepare(
-        Map                     map,
-        TopologyContext         topologyContext,
-        OutputCollector         collector)
-    {
-      // save the output collector for emitting tuples
-      _collector = collector;
+            //********* TO DO 3-of-4
+            // instantiate a redis connection
+            RedisClient client = new RedisClient("localhost", 6379);
 
-      //********* TO DO 3-of-4
-      // instantiate a redis connection
+            // initiate the actual connection
+            redis = client.connect();
 
-      // initiate the actual connection
+            //********* END 3-of-4
+        }
 
-      //********* END 3-of-4
+        @Override
+        public void execute(Tuple tuple) {
+            // get the column word from tuple
+            String word = tuple.getString(0);
+
+            // build the word with the exclamation marks appended
+            StringBuilder exclamatedWord = new StringBuilder();
+            exclamatedWord.append(word).append("!!!");
+
+            // emit the word with exclamations
+            _collector.emit(tuple, new Values(exclamatedWord.toString()));
+
+            //********* TO DO 4-of-4 Uncomment redis reporter
+            long count = 30;
+            redis.publish("WordCountTopology", exclamatedWord.toString() + "|" + Long.toString(count));
+            //********* END 4-of-4
+        }
+
+        @Override
+        public void declareOutputFields(OutputFieldsDeclarer declarer) {
+            // tell storm the schema of the output tuple for this spout
+
+            // tuple consists of a single column called 'exclamated-word'
+            declarer.declare(new Fields("exclamated-word"));
+        }
     }
 
-    @Override
-    public void execute(Tuple tuple)
-    {
-      // get the column word from tuple
-      String word = tuple.getString(0);
+    public static void main(String[] args) throws Exception {
+        // create the topology
+        TopologyBuilder builder = new TopologyBuilder();
 
-      // build the word with the exclamation marks appended
-      StringBuilder exclamatedWord = new StringBuilder();
-      exclamatedWord.append(word).append("!!!");
+        // attach the word spout to the topology - parallelism of 10
+        builder.setSpout("word", new TestWordSpout(), 10);
 
-      // emit the word with exclamations
-      _collector.emit(tuple, new Values(exclamatedWord.toString()));
+        // attach the exclamation bolt to the topology - parallelism of 3
+        builder.setBolt("exclaim1", new ExclamationBolt(), 3).shuffleGrouping("word");
 
-      //********* TO DO 4-of-4 Uncomment redis reporter
-      //long count = 30;
-      //redis.publish("WordCountTopology", exclamatedWord.toString() + "|" + Long.toString(count));
-      //********* END 4-of-4
+        // attach another exclamation bolt to the topology - parallelism of 2
+        builder.setBolt("exclaim2", new ExclamationBolt(), 2).shuffleGrouping("exclaim1");
+
+        // create the default config object
+        Config conf = new Config();
+
+        // set the config in debugging mode
+        conf.setDebug(true);
+
+        if (args != null && args.length > 0) {
+
+            // run it in a live cluster
+
+            // set the number of workers for running all spout and bolt tasks
+            conf.setNumWorkers(3);
+
+            // create the topology and submit with config
+            StormSubmitter.submitTopology(args[0], conf, builder.createTopology());
+
+        } else {
+
+            // run it in a simulated local cluster
+
+            // create the local cluster instance
+            LocalCluster cluster = new LocalCluster();
+
+            // submit the topology to the local cluster
+            cluster.submitTopology("exclamation", conf, builder.createTopology());
+
+            // let the topology run for 30 seconds. note topologies never terminate!
+            Thread.sleep(30000);
+
+            // kill the topology
+            cluster.killTopology("exclamation");
+
+            // we are done, so shutdown the local cluster
+            cluster.shutdown();
+        }
     }
-
-    @Override
-    public void declareOutputFields(OutputFieldsDeclarer declarer)
-    {
-      // tell storm the schema of the output tuple for this spout
-
-      // tuple consists of a single column called 'exclamated-word'
-      declarer.declare(new Fields("exclamated-word"));
-    }
-  }
-
-  public static void main(String[] args) throws Exception
-  {
-    // create the topology
-    TopologyBuilder builder = new TopologyBuilder();
-
-    // attach the word spout to the topology - parallelism of 10
-    builder.setSpout("word", new TestWordSpout(), 10);
-
-    // attach the exclamation bolt to the topology - parallelism of 3
-    builder.setBolt("exclaim1", new ExclamationBolt(), 3).shuffleGrouping("word");
-
-    // attach another exclamation bolt to the topology - parallelism of 2
-    builder.setBolt("exclaim2", new ExclamationBolt(), 2).shuffleGrouping("exclaim1");
-
-    // create the default config object
-    Config conf = new Config();
-
-    // set the config in debugging mode
-    conf.setDebug(true);
-
-    if (args != null && args.length > 0) {
-
-      // run it in a live cluster
-
-      // set the number of workers for running all spout and bolt tasks
-      conf.setNumWorkers(3);
-
-      // create the topology and submit with config
-      StormSubmitter.submitTopology(args[0], conf, builder.createTopology());
-
-    } else {
-
-      // run it in a simulated local cluster
-
-      // create the local cluster instance
-      LocalCluster cluster = new LocalCluster();
-
-      // submit the topology to the local cluster
-      cluster.submitTopology("exclamation", conf, builder.createTopology());
-
-      // let the topology run for 30 seconds. note topologies never terminate!
-      Thread.sleep(30000);
-
-      // kill the topology
-      cluster.killTopology("exclamation");
-
-      // we are done, so shutdown the local cluster
-      cluster.shutdown();
-    }
-  }
 }
