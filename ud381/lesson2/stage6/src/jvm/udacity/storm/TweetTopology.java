@@ -34,10 +34,10 @@ class TweetTopology
 
     // now create the tweet spout with the credentials
       TweetSpout tweetSpout = new TweetSpout(
-              "TYRkKlIycqinW54hfyFM3T5Cm",
-              "ib4GLu2z1LfDuAq7ffZoRilTlYgTFxWi3S81Gr136IwzL4pj9F",
-              "14407620-BHplAHQpcM61S2VpovKymlRnLVDRw2jVmfmIGpMBp",
-              "FbZ7O7NGdk6PNpDvCJqhZmdWJscfZouAomeYLCdRvsxGD"
+              "TYR",
+              "ib4",
+              "144",
+              "FbZ7"
       );
 
 
