@@ -6,5 +6,7 @@ Blog post on [lesson 1](http://perevillega.com/real-time-analytics-with-apache-s
 
 Blog post on [lesson 2](http://perevillega.com/real-time-analytics-with-storm-lesson-2/)
 
+Blog post on [lesson 3 and 4](http://perevillega.com/real-time-analytics-with-apache-storm-done/)
+
 
 
