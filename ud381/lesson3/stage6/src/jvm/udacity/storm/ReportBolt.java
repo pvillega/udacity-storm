@@ -24,40 +24,35 @@ import com.lambdaworks.redis.RedisConnection;
 /**
  * A bolt that prints the word and count to redis
  */
-public class ReportBolt extends BaseRichBolt
-{
-  // place holder to keep the connection to redis
-  transient RedisConnection<String,String> redis;
+public class ReportBolt extends BaseRichBolt {
+    // place holder to keep the connection to redis
+    transient RedisConnection<String, String> redis;
 
-  @Override
-  public void prepare(
-      Map                     map,
-      TopologyContext         topologyContext,
-      OutputCollector         outputCollector)
-  {
-    // instantiate a redis connection
-    RedisClient client = new RedisClient("localhost",6379);
+    @Override
+    public void prepare(
+            Map map,
+            TopologyContext topologyContext,
+            OutputCollector outputCollector) {
+        // instantiate a redis connection
+        RedisClient client = new RedisClient("localhost", 6379);
 
-    // initiate the actual connection
-    redis = client.connect();
-  }
+        // initiate the actual connection
+        redis = client.connect();
+    }
 
-  @Override
-  public void execute(Tuple tuple)
-  {
-    // access the first column 'word'
-    String word = tuple.getStringByField("word");
+    @Override
+    public void execute(Tuple tuple) {
+        // access the first column 'word'
+        String word = (String) tuple.getValue(0);
 
-    // access the second column 'count'
-    Integer count = tuple.getIntegerByField("count");
-    //Integer count = 30;
+        // access the second column 'count'
+        Integer count = 30;
 
-    // publish the word count to redis using word as the key
-    redis.publish("WordCountTopology", word + "|" + Long.toString(count));
-  }
+        // publish the word count to redis using word as the key
+        redis.publish("WordCountTopology", word + "|" + Long.toString(count));
+    }
 
-  public void declareOutputFields(OutputFieldsDeclarer declarer)
-  {
-    // nothing to add - since it is the final bolt
-  }
+    public void declareOutputFields(OutputFieldsDeclarer declarer) {
+        // nothing to add - since it is the final bolt
+    }
 }

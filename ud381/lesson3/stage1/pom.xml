@@ -93,6 +93,11 @@
   <build>
     <sourceDirectory>src/jvm</sourceDirectory>
     <!-- ADDING MAVEN RESOURCES FOR PYTHON SHELL -->
+      <resources>
+          <resource>
+              <directory>src/jvm/udacity/storm</directory>
+          </resource>
+      </resources>
 
     <!-- END ADDING MAVEN RESOURCES FOR PYTHON SHELL -->
     <plugins>

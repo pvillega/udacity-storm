@@ -33,12 +33,12 @@ class TweetTopology
      */
 
     // now create the tweet spout with the credentials
-    TweetSpout tweetSpout = new TweetSpout(
-        "[Your customer key]",
-        "[Your secret key]",
-        "[Your access token]",
-        "[Your access secret]"
-    );
+      TweetSpout tweetSpout = new TweetSpout(
+              "",
+              "",
+              "",
+              ""
+      );
 
     // attach the tweet spout to the topology - parallelism of 1
     builder.setSpout("tweet-spout", tweetSpout, 1);
@@ -47,13 +47,16 @@ class TweetTopology
     builder.setBolt("parse-tweet-bolt", new ParseTweetBolt(), 10).shuffleGrouping("tweet-spout");
 
     // attach the count bolt using fields grouping - parallelism of 15
-    //builder.setBolt("count-bolt", new CountBolt(), 15).fieldsGrouping("parse-tweet-bolt", new Fields("tweet-word"));
+    builder.setBolt("count-bolt", new CountBolt(), 15).fieldsGrouping("parse-tweet-bolt", new Fields("tweet-word"));
 
     // attach rolling count bolt using fields grouping - parallelism of 5
-    builder.setBolt("rolling-count-bolt", new RollingCountBolt(30, 10), 1).fieldsGrouping("parse-tweet-bolt", new Fields("tweet-word"));
+//    builder.setBolt("rolling-count-bolt", new RollingCountBolt(30, 10), 1).fieldsGrouping("parse-tweet-bolt", new Fields("tweet-word"));
+
+      builder.setBolt("int-rank-bolt", new IntermediateRankingsBolt(10), 4).fieldsGrouping("count-bolt", new Fields("word"));
+      builder.setBolt("total-ranking-bolt", new TotalRankingsBolt(10), 15).globalGrouping("int-rank-bolt");
 
     // attach the report bolt using global grouping - parallelism of 1
-    builder.setBolt("report-bolt", new ReportBolt(), 1).globalGrouping("rolling-count-bolt");
+    builder.setBolt("report-bolt", new ReportBolt(), 1).globalGrouping("total-ranking-bolt");
 
     // create the default config object
     Config conf = new Config();

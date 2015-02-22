@@ -13,17 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# https://github.com/apache/storm/blob/master/examples/storm-starter/multilang/resources/splitsentence.py
-
 import storm
 
 class SplitSentenceBolt(storm.BasicBolt):
     def process(self, tup):
-        if tup.values[0]:
-            words = tup.values[0].split(" ")
-            if words:
-                for word in words:
-                    storm.emit([word])
+        words = tup.values[0].split(" ")
+        for word in words:
+          storm.emit([word])
 
 SplitSentenceBolt().run()
